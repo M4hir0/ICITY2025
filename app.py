@@ -145,69 +145,116 @@ def extract_image_metadata(img_file):
 def init_firebase():
     global db
     
-    # 從環境變數建立 Firebase 認證
-    firebase_config = {
-        "type": os.getenv('FIREBASE_TYPE'),
-        "project_id": os.getenv('FIREBASE_PROJECT_ID'),
-        "private_key_id": os.getenv('FIREBASE_PRIVATE_KEY_ID'),
-        "private_key": os.getenv('FIREBASE_PRIVATE_KEY').replace('\\n', '\n'),
-        "client_email": os.getenv('FIREBASE_CLIENT_EMAIL'),
-        "client_id": os.getenv('FIREBASE_CLIENT_ID'),
-        "auth_uri": os.getenv('FIREBASE_AUTH_URI'),
-        "token_uri": os.getenv('FIREBASE_TOKEN_URI'),
-        "auth_provider_x509_cert_url": os.getenv('FIREBASE_AUTH_PROVIDER_X509_CERT_URL'),
-        "client_x509_cert_url": os.getenv('FIREBASE_CLIENT_X509_CERT_URL'),
-        "universe_domain": os.getenv('FIREBASE_UNIVERSE_DOMAIN')
-    }
-    
-    cred = credentials.Certificate(firebase_config)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
+    try:
+        # 檢查是否已經初始化
+        if firebase_admin._apps:
+            print("Firebase already initialized")
+            db = firestore.client()
+            return
+            
+        # 從環境變數建立 Firebase 認證
+        firebase_config = {
+            "type": os.getenv('FIREBASE_TYPE'),
+            "project_id": os.getenv('FIREBASE_PROJECT_ID'),
+            "private_key_id": os.getenv('FIREBASE_PRIVATE_KEY_ID'),
+            "private_key": os.getenv('FIREBASE_PRIVATE_KEY').replace('\\n', '\n'),  # 修復換行符號問題
+            "client_email": os.getenv('FIREBASE_CLIENT_EMAIL'),
+            "client_id": os.getenv('FIREBASE_CLIENT_ID'),
+            "auth_uri": os.getenv('FIREBASE_AUTH_URI'),
+            "token_uri": os.getenv('FIREBASE_TOKEN_URI'),
+            "auth_provider_x509_cert_url": os.getenv('FIREBASE_AUTH_PROVIDER_X509_CERT_URL'),
+            "client_x509_cert_url": os.getenv('FIREBASE_CLIENT_X509_CERT_URL'),
+            "universe_domain": os.getenv('FIREBASE_UNIVERSE_DOMAIN')
+        }
+        
+        # 驗證必要的環境變數
+        required_vars = ['FIREBASE_TYPE', 'FIREBASE_PROJECT_ID', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {missing_vars}")
+        
+        cred = credentials.Certificate(firebase_config)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        print("✅ Firebase initialized successfully")
+        
+    except Exception as e:
+        print(f"❌ Firebase initialization failed: {e}")
+        # 設定 db 為 None，讓應用程式可以繼續運行但跳過 Firebase 操作
+        db = None
 
 # 📝 Write data to Firestore
 def save_to_firestore(image_url, description, ai_result, status, filename, has_gps, gps_info_raw):
+    global db
+    
+    # 檢查 Firebase 是否可用
+    if db is None:
+        print("⚠️ Firebase not available, skipping database save")
+        return False
+    
+    try:
+        if has_gps:
+            gps_info = convert_gps_info(gps_info_raw)
+        else:
+            gps_info = None
 
-    if has_gps:
-      gps_info = convert_gps_info(gps_info_raw)
-
-    doc_ref = db.collection("photos").add({
-        "image_url": image_url,
-        "description": description,
-        "ai_result": ai_result,
-        "filename": filename,
-        "has_gps": has_gps,
-        "exif": gps_info,
-        "status": status,
-        "timestamp": firestore.SERVER_TIMESTAMP,
-        "updateTime": firestore.SERVER_TIMESTAMP
-    })
-    print("✅ Succeeded! Document ID:", doc_ref[1].id)
+        doc_ref = db.collection("photos").add({
+            "image_url": image_url,
+            "description": description,
+            "ai_result": ai_result,
+            "filename": filename,
+            "has_gps": has_gps,
+            "exif": gps_info,
+            "status": status,
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "updateTime": firestore.SERVER_TIMESTAMP
+        })
+        print("✅ Succeeded! Document ID:", doc_ref[1].id)
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to save to Firestore: {e}")
+        return False
 
 def analyze_and_upload(img_file, description):
-    image = Image.open(img_file)
+    try:
+        image = Image.open(img_file)
 
-    # Parsing EXIF
-    exif = get_exif_data(image)
-    timestamp = exif.get("DateTime", "No Timestamp")
-    has_gps = "GPSInfo" in exif
-    gps_raw = exif.get("GPSInfo")
-    gps_info = get_gps_info(gps_raw) if gps_raw else "No GPS Info"
+        # Parsing EXIF
+        exif = get_exif_data(image)
+        timestamp = exif.get("DateTime", "No Timestamp")
+        has_gps = "GPSInfo" in exif
+        gps_raw = exif.get("GPSInfo")
+        gps_info = get_gps_info(gps_raw) if gps_raw else "No GPS Info"
 
-    # Upload to Imgbb
-    imgbb_url = upload_to_imgbb(img_file)
+        # Upload to Imgbb
+        imgbb_url = upload_to_imgbb(img_file)
 
-    ## Get AI analysis result
-    ai_result, status = analyze(img_file)
+        ## Get AI analysis result
+        ai_result, status = analyze(img_file)
 
-    print(f"AI Analysis Result: {ai_result}")
-    print(f"Status: {status}")
+        print(f"AI Analysis Result: {ai_result}")
+        print(f"Status: {status}")
 
-    if has_gps:
-      save_to_firestore(imgbb_url, description, ai_result, status, img_file, has_gps, gps_info)
-      send_photo(img_file, description)
+        # 嘗試保存到 Firestore（即使失敗也繼續）
+        firestore_success = False
+        if has_gps:
+            firestore_success = save_to_firestore(imgbb_url, description, ai_result, status, img_file, has_gps, gps_info)
+            if firestore_success:
+                send_photo(img_file, description)
 
-    result = f"📅 Capture Time: {timestamp}\n📍 GPS Info: \n{gps_info}\n🖼️ Imgbb URL: {imgbb_url}\nAI Analysis Result: {ai_result}\nStatus: {status}"
-    return image, result
+        result = f"📅 Capture Time: {timestamp}\n📍 GPS Info: \n{gps_info}\n🖼️ Imgbb URL: {imgbb_url}\nAI Analysis Result: {ai_result}\nStatus: {status}"
+        if not firestore_success:
+            result += "\n⚠️ Note: Data not saved to database due to connection issues"
+        
+        # 關閉圖片以釋放記憶體
+        image.close()
+        
+        return None, result  # 返回 None 作為 image，因為我們已經關閉了它
+        
+    except Exception as e:
+        print(f"❌ Error in analyze_and_upload: {e}")
+        return None, f"❌ Error processing image: {str(e)}"
 
 app = Flask(__name__)
 
@@ -242,9 +289,12 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        image, result = analyze_and_upload(filepath, description)
-
-        return render_template('result.html', filename=filename, description=description)
+        try:
+            image, result = analyze_and_upload(filepath, description)
+            return render_template('result.html', filename=filename, description=description, result=result)
+        except Exception as e:
+            print(f"❌ Upload error: {e}")
+            return f"處理檔案時發生錯誤: {str(e)}"
     else:
         return "不支援的檔案格式"
 
@@ -252,9 +302,20 @@ def upload_file():
 def uploaded_file(filename):
     return redirect(url_for('static', filename='uploads/' + filename))
 
+# 初始化 Firebase
 init_firebase()
+
+# 添加健康檢查路由
+@app.route('/health')
+def health_check():
+    global db
+    status = {
+        "status": "ok",
+        "firebase": "connected" if db is not None else "disconnected",
+        "timestamp": firestore.SERVER_TIMESTAMP if db else "N/A"
+    }
+    return status
 
 # if __name__ == '__main__':
 #     init_firebase()
 #     app.run(debug=True)
-
