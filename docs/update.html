@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Task Management</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: sans-serif;
+    }
+    body {
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      background: #d0edd4;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header h1 {
+      margin: 0;
+      color: #2c3e50;
+    }
+    .filters {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .filter-select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-width: 150px;
+    }
+    .filter-label {
+      color: #666;
+      margin-right: 5px;
+    }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .photo-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .photo-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    .photo-info {
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    .photo-time {
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    .photo-description {
+      margin-bottom: 15px;
+      color: #333;
+      width: 100%;
+    }
+    .ai-result {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      border-left: 4px solid #4CAF50;
+    }
+    .ai-result-title {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+    .ai-result-content {
+      color: #666;
+      font-size: 0.9em;
+      white-space: pre-wrap;
+    }
+    .status-select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .comment-input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 60px;
+      box-sizing: border-box;
+    }
+    .save-button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .save-button:hover {
+      background: #45a049;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+    }
+    .status-todo {
+      background: #ffecec;
+      color: #d32f2f;
+    }
+    .status-doing {
+      background: #fff8e1;
+      color: #f57c00;
+    }
+    .status-done {
+      background: #e6ffe6;
+      color: #388e3c;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      font-size: 1.2em;
+      color: #666;
+    }
+    .map-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+    }
+    .map-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 1000px;
+      height: 90%;
+      max-height: 800px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .map-title {
+      font-size: 1.2em;
+      color: #333;
+      margin: 0;
+    }
+    .close-map {
+      background: #ff4444;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .close-map:hover {
+      background: #cc0000;
+    }
+    #map {
+      width: 100%;
+      height: calc(100% - 50px);
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span style="font-size: 2em;">🌱</span>
+      <h1>Task Management</h1>
+    </div>
+    <div class="filters">
+      <div>
+        <span class="filter-label">Status:</span>
+        <select id="statusFilter" class="filter-select">
+          <option value="all">All</option>
+          <option value="todo">To Do</option>
+          <option value="doing">Doing</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div>
+        <span class="filter-label">Sort:</span>
+        <select id="timeSort" class="filter-select">
+          <option value="newest">Descending</option>
+          <option value="oldest">Ascending</option>
+        </select>
+      </div>
+    </div>
+    <div id="photo-grid" class="photo-grid">
+      <div class="loading">Loading...</div>
+    </div>
+  </div>
+
+  <div id="mapModal" class="map-modal">
+    <div class="map-container">
+      <div class="map-header">
+        <h2 class="map-title">Location</h2>
+        <button class="close-map" onclick="closeMap()">
+          <span>✕</span> Close Map
+        </button>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDXHzQXpNpryA11vcPG4ubXHNS5Ensjv48",
+        authDomain: "icity-38998.firebaseapp.com",
+        projectId: "icity-38998",
+        storageBucket: "icity-38998.firebasestorage.app",
+        messagingSenderId: "901268917331",
+        appId: "1:901268917331:web:75c1f1e75e7d3a56b98aa6",
+        measurementId: "G-R8TW8NNJQK"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const statusMap = {
+      todo: { label: 'To Do', class: 'status-todo' },
+      doing: { label: 'Doing', class: 'status-doing' },
+      done: { label: 'Done', class: 'status-done' }
+    };
+
+    let map = null;
+    let currentMarker = null;
+
+    function dmsToDecimal(dmsArray, ref) {
+      const [d, m, s] = dmsArray.map(Number);
+      let decimal = d + m / 60 + s / 3600;
+    
+      // 如果是南緯或西經 → 負數
+      if (ref === "S" || ref === "W") {
+        decimal = -decimal;
+      }
+      return decimal;
+    }
+
+    function parseGPSDateTime(gpsData) {
+      if (!gpsData?.GPSDateStamp || !gpsData?.GPSTimeStamp) return null;
+      
+      const [year, month, day] = gpsData.GPSDateStamp.split(':').map(Number);
+      let hours = Math.floor(gpsData.GPSTimeStamp[0]);
+      const minutes = Math.floor(gpsData.GPSTimeStamp[1]);
+      const seconds = Math.floor(gpsData.GPSTimeStamp[2]);
+      
+      // GPS 時間是 UTC+0，需要轉換為台灣時間
+      hours = (hours + 8) % 24;
+      
+      return {
+        timestamp: new Date(year, month - 1, day, hours, minutes, seconds).getTime(),
+        formatted: `${year}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} (UTC+8)`
+      };
+    }
+
+    function formatServerTime(timestamp) {
+      if (!timestamp) return "No Timestamp";
+      const date = new Date(timestamp);
+      
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      return `${year}/${month}/${day} ${hours}:${minutes}:${seconds} (Server Time)`;
+    }
+
+    window.showMap = function(lat, lon, description) {
+      const modal = document.getElementById('mapModal');
+      modal.style.display = 'block';
+      
+      if (!map) {
+        map = L.map('map').setView([lat, lon], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+      } else {
+        map.setView([lat, lon], 16);
+      }
+
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+
+      currentMarker = L.marker([lat, lon]).addTo(map);
+      currentMarker.bindPopup(description).openPopup();
+    }
+
+    window.closeMap = function() {
+      document.getElementById('mapModal').style.display = 'none';
+    }
+
+    async function loadData() {
+      const snapshot = await getDocs(collection(db, "photos"));
+      const photoGrid = document.getElementById('photo-grid');
+      photoGrid.innerHTML = '';
+
+      const statusFilter = document.getElementById('statusFilter').value;
+      const timeSort = document.getElementById('timeSort').value;
+      
+      let filteredDocs = snapshot.docs.filter(doc => {
+        if (statusFilter === 'all') return true;
+        return doc.data().status === statusFilter;
+      });
+
+      // 按照拍攝時間排序
+      filteredDocs.sort((a, b) => {
+        const aData = a.data();
+        const bData = b.data();
+        const aTime = parseGPSDateTime(aData.exif)?.timestamp || 0;
+        const bTime = parseGPSDateTime(bData.exif)?.timestamp || 0;
+        
+        return timeSort === 'newest' ? bTime - aTime : aTime - bTime;
+      });
+
+      filteredDocs.forEach(doc => {
+        const data = doc.data();
+        const gpsDateTime = parseGPSDateTime(data.exif);
+        const uploadTimestamp = data.timestamp?.seconds * 1000;
+        const updateTimestamp = data.updateTime?.seconds * 1000;
+        
+        const photoCard = document.createElement('div');
+        photoCard.className = 'photo-card';
+        
+        const lat = dmsToDecimal(data.exif.GPSLatitude, data.exif.GPSLatitudeRef);
+        const lon = dmsToDecimal(data.exif.GPSLongitude, data.exif.GPSLongitudeRef);
+        
+        photoCard.innerHTML = `
+          <img class="photo-image" src="${data.image_url}" alt="photo" onclick="showMap(${lat}, ${lon}, '${data.description || '(無描述文字)'}')">
+          <div class="photo-info">
+            <div class="photo-time">
+              <div>🎦: ${gpsDateTime?.formatted || 'No Timestamp'}</div>
+              <div>⬆️: ${formatServerTime(uploadTimestamp)}</div>
+              ${updateTimestamp ? `<div>🔄: ${formatServerTime(updateTimestamp)}</div>` : ''}
+            </div>
+            <div class="photo-description">${data.description || '(No Description)'}</div>
+            ${data.ai_result ? `
+              <div class="ai-result">
+                <div class="ai-result-title">AI Result</div>
+                <div class="ai-result-content">${data.ai_result}</div>
+              </div>
+            ` : ''}
+            <div class="status-badge ${statusMap[data.status]?.class || ''}">
+              ${statusMap[data.status]?.label || data.status}
+            </div>
+            <select class="status-select" data-id="${doc.id}">
+              <option value="todo" ${data.status === 'todo' ? 'selected' : ''}>To Do</option>
+              <option value="doing" ${data.status === 'doing' ? 'selected' : ''}>Doing</option>
+              <option value="done" ${data.status === 'done' ? 'selected' : ''}>Done</option>
+            </select>
+            <textarea class="comment-input" data-id="${doc.id}" placeholder="Comment...">${data.comment || ''}</textarea>
+            <button class="save-button" data-id="${doc.id}">Save Change</button>
+          </div>
+        `;
+        photoGrid.appendChild(photoCard);
+      });
+
+      // 添加事件監聽器
+      document.querySelectorAll('.save-button').forEach(button => {
+        button.addEventListener('click', async (e) => {
+          const id = e.target.dataset.id;
+          const status = document.querySelector(`.status-select[data-id="${id}"]`).value;
+          const comment = document.querySelector(`.comment-input[data-id="${id}"]`).value;
+          
+          try {
+            await updateDoc(doc(db, "photos", id), {
+              status: status,
+              comment: comment,
+              updateTime: serverTimestamp()
+            });
+            alert('Update Succeeded');
+            loadData();
+          } catch (error) {
+            console.error("Error updating document: ", error);
+            alert('Update failed, Please try again!');
+          }
+        });
+      });
+    }
+
+    // 添加篩選事件監聽器
+    document.getElementById('statusFilter').addEventListener('change', loadData);
+    document.getElementById('timeSort').addEventListener('change', loadData);
+
+    // 載入 Leaflet
+    const leafletScript = document.createElement("script");
+    leafletScript.src = "https://unpkg.com/leaflet/dist/leaflet.js";
+    document.head.appendChild(leafletScript);
+
+    leafletScript.onload = () => {
+      loadData();
+    };
+  </script>
+</body>
+</html> 
