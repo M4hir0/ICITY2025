@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>上傳照片與描述</title>
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- EXIF.js for GPS data reading -->
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        <div class="card shadow-lg mx-auto" style="max-width: 600px;">
+            <div class="card-body">
+                <h2 class="text-center mb-4">📸 上傳你的照片</h2>
+
+                <!-- 狀態顯示區域 -->
+                <div id="status" class="alert alert-info text-center mb-3" role="alert">
+                    請選擇一張照片
+                </div>
+
+                <!-- 照片預覽區域 -->
+                <div id="imagePreview" class="text-center mb-3" style="display: none;">
+                    <img id="previewImage" class="img-fluid rounded shadow" style="max-height: 300px;">
+                </div>
+
+                <!-- GPS 資訊顯示區域 -->
+                <div id="gpsInfo" class="alert alert-success mb-3" style="display: none;">
+                    <h6 class="alert-heading">📍 GPS 資訊</h6>
+                    <div id="gpsDetails"></div>
+                </div>
+
+                <form action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-3">
+                        <label for="photo" class="form-label fw-bold">選擇照片：</label>
+                        <input type="file" class="form-control" name="photo" id="photo" accept="image/*" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-bold">照片描述：</label>
+                        <textarea class="form-control" name="description" id="description" rows="4" placeholder="請先選擇包含 GPS 資訊的照片..." disabled></textarea>
+                        <div class="form-text">請先選擇包含 GPS 資訊的照片才能填寫描述</div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>上傳 🚀</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 獲取 DOM 元素
+        const statusDiv = document.getElementById('status');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImage = document.getElementById('previewImage');
+        const gpsInfo = document.getElementById('gpsInfo');
+        const gpsDetails = document.getElementById('gpsDetails');
+        const photoInput = document.getElementById('photo');
+        const descriptionTextarea = document.getElementById('description');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadForm = document.getElementById('uploadForm');
+
+        // 儲存 GPS 座標
+        let hasGPS = false;
+        let gpsCoordinates = null;
+
+        // 監聽照片選擇
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                resetForm();
+                return;
+            }
+
+            // 顯示照片預覽
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                imagePreview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+
+            // 讀取 EXIF 數據
+            statusDiv.innerHTML = "正在讀取照片資訊...";
+            statusDiv.className = "alert alert-warning text-center mb-3";
+            
+            EXIF.getData(file, function() {
+                const exifData = EXIF.getAllTags(this);
+                console.log('EXIF data:', exifData);
+                console.log('GPS Latitude:', exifData.GPSLatitude);
+                console.log('GPS Longitude:', exifData.GPSLongitude);
+                console.log('GPS LatitudeRef:', exifData.GPSLatitudeRef);
+                console.log('GPS LongitudeRef:', exifData.GPSLongitudeRef);
+                
+                // 嘗試使用 EXIF.js 的其他方法
+                console.log('EXIF.getTag(this, "GPSLatitude"):', EXIF.getTag(this, "GPSLatitude"));
+                console.log('EXIF.getTag(this, "GPSLongitude"):', EXIF.getTag(this, "GPSLongitude"));
+                console.log('EXIF.getTag(this, "GPSLatitudeRef"):', EXIF.getTag(this, "GPSLatitudeRef"));
+                console.log('EXIF.getTag(this, "GPSLongitudeRef"):', EXIF.getTag(this, "GPSLongitudeRef"));
+
+                if (exifData.GPSLatitude && exifData.GPSLongitude) {
+                    console.log('GPS Latitude array:', exifData.GPSLatitude);
+                    console.log('GPS Longitude array:', exifData.GPSLongitude);
+                    
+                    // 直接使用原始數據
+                    const latitude = convertDMSToDD(
+                        exifData.GPSLatitude[0],
+                        exifData.GPSLatitude[1],
+                        exifData.GPSLatitude[2],
+                        exifData.GPSLatitudeRef
+                    );
+
+                    const longitude = convertDMSToDD(
+                        exifData.GPSLongitude[0],
+                        exifData.GPSLongitude[1],
+                        exifData.GPSLongitude[2],
+                        exifData.GPSLongitudeRef
+                    );
+
+                    console.log('Converted latitude:', latitude);
+                    console.log('Converted longitude:', longitude);
+
+                    // 檢查轉換結果是否為有效數字
+                    if (!isNaN(latitude) && !isNaN(longitude) && isFinite(latitude) && isFinite(longitude)) {
+                        // 儲存 GPS 座標
+                        gpsCoordinates = { latitude, longitude };
+                        hasGPS = true;
+
+                        // 顯示 GPS 資訊
+                        const dateTime = exifData.DateTimeOriginal || exifData.DateTime || '未知';
+                        gpsDetails.innerHTML = `
+                            <p class="mb-1"><strong>緯度:</strong> ${latitude.toFixed(6)}°</p>
+                            <p class="mb-1"><strong>經度:</strong> ${longitude.toFixed(6)}°</p>
+                            <p class="mb-2"><strong>拍攝時間:</strong> ${dateTime}</p>
+                            <a href="https://www.google.com/maps?q=${latitude},${longitude}" 
+                               target="_blank" 
+                               class="btn btn-sm btn-outline-success">
+                                📍 在 Google Maps 中查看位置
+                            </a>
+                        `;
+                        gpsInfo.style.display = 'block';
+
+                        // 啟用描述輸入和上傳按鈕
+                        descriptionTextarea.disabled = false;
+                        descriptionTextarea.placeholder = "請輸入照片內容...";
+                        submitBtn.disabled = false;
+                        
+                        statusDiv.innerHTML = "✅ 成功讀取 GPS 資訊！現在可以填寫描述並上傳";
+                        statusDiv.className = "alert alert-success text-center mb-3";
+                    } else {
+                        // GPS 座標轉換失敗
+                        hasGPS = false;
+                        gpsCoordinates = null;
+                        gpsInfo.style.display = 'none';
+                        
+                        // 禁用描述輸入和上傳按鈕
+                        descriptionTextarea.disabled = true;
+                        descriptionTextarea.value = '';
+                        descriptionTextarea.placeholder = "請先選擇包含 GPS 資訊的照片...";
+                        submitBtn.disabled = true;
+                        
+                        statusDiv.innerHTML = "❌ GPS 座標格式錯誤，無法讀取位置資訊";
+                        statusDiv.className = "alert alert-danger text-center mb-3";
+                        console.error('Invalid GPS coordinates:', { latitude, longitude });
+                    }
+                } else {
+                    // 嘗試備用方法讀取 GPS
+                    console.log('Trying alternative GPS reading method...');
+                    const altLat = EXIF.getTag(this, "GPSLatitude");
+                    const altLon = EXIF.getTag(this, "GPSLongitude");
+                    const altLatRef = EXIF.getTag(this, "GPSLatitudeRef");
+                    const altLonRef = EXIF.getTag(this, "GPSLongitudeRef");
+                    
+                    console.log('Alternative GPS data:', { altLat, altLon, altLatRef, altLonRef });
+                    
+                    if (altLat && altLon) {
+                        console.log('Using alternative GPS data');
+                        const latitude = convertDMSToDD(
+                            altLat[0],
+                            altLat[1],
+                            altLat[2],
+                            altLatRef
+                        );
+
+                        const longitude = convertDMSToDD(
+                            altLon[0],
+                            altLon[1],
+                            altLon[2],
+                            altLonRef
+                        );
+
+                        console.log('Alternative converted latitude:', latitude);
+                        console.log('Alternative converted longitude:', longitude);
+
+                        // 檢查轉換結果是否為有效數字
+                        if (!isNaN(latitude) && !isNaN(longitude) && isFinite(latitude) && isFinite(longitude)) {
+                            // 儲存 GPS 座標
+                            gpsCoordinates = { latitude, longitude };
+                            hasGPS = true;
+
+                            // 顯示 GPS 資訊
+                            const dateTime = exifData.DateTimeOriginal || exifData.DateTime || '未知';
+                            gpsDetails.innerHTML = `
+                                <p class="mb-1"><strong>緯度:</strong> ${latitude.toFixed(6)}°</p>
+                                <p class="mb-1"><strong>經度:</strong> ${longitude.toFixed(6)}°</p>
+                                <p class="mb-2"><strong>拍攝時間:</strong> ${dateTime}</p>
+                                <a href="https://www.google.com/maps?q=${latitude},${longitude}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-success">
+                                    📍 在 Google Maps 中查看位置
+                                </a>
+                            `;
+                            gpsInfo.style.display = 'block';
+
+                            // 啟用描述輸入和上傳按鈕
+                            descriptionTextarea.disabled = false;
+                            descriptionTextarea.placeholder = "請輸入照片內容...";
+                            submitBtn.disabled = false;
+                            
+                            statusDiv.innerHTML = "✅ 成功讀取 GPS 資訊！現在可以填寫描述並上傳";
+                            statusDiv.className = "alert alert-success text-center mb-3";
+                        } else {
+                            // 備用方法也失敗
+                            hasGPS = false;
+                            gpsCoordinates = null;
+                            gpsInfo.style.display = 'none';
+                            
+                            // 禁用描述輸入和上傳按鈕
+                            descriptionTextarea.disabled = true;
+                            descriptionTextarea.value = '';
+                            descriptionTextarea.placeholder = "請先選擇包含 GPS 資訊的照片...";
+                            submitBtn.disabled = true;
+                            
+                            statusDiv.innerHTML = "❌ 此照片不包含 GPS 資訊，請選擇其他照片";
+                            statusDiv.className = "alert alert-danger text-center mb-3";
+                        }
+                    } else {
+                        // 沒有 GPS 資訊
+                        hasGPS = false;
+                        gpsCoordinates = null;
+                        gpsInfo.style.display = 'none';
+                        
+                        // 禁用描述輸入和上傳按鈕
+                        descriptionTextarea.disabled = true;
+                        descriptionTextarea.value = '';
+                        descriptionTextarea.placeholder = "請先選擇包含 GPS 資訊的照片...";
+                        submitBtn.disabled = true;
+                        
+                        statusDiv.innerHTML = "❌ 此照片不包含 GPS 資訊，請選擇其他照片";
+                        statusDiv.className = "alert alert-danger text-center mb-3";
+                    }
+                }
+            });
+        });
+
+        // 將度分秒格式轉換為十進位度數
+        function convertDMSToDD(degrees, minutes, seconds, direction) {
+            console.log('Converting GPS:', { degrees, minutes, seconds, direction });
+            
+            // 直接使用原始值，不做額外處理
+            let dd = degrees + (minutes / 60) + (seconds / 3600);
+            console.log('Calculated DD:', dd);
+            
+            if (direction === 'S' || direction === 'W') {
+                dd = dd * -1;
+            }
+            console.log('Final coordinate:', dd);
+            return dd;
+        }
+
+        // 重置表單
+        function resetForm() {
+            imagePreview.style.display = 'none';
+            gpsInfo.style.display = 'none';
+            descriptionTextarea.disabled = true;
+            descriptionTextarea.value = '';
+            descriptionTextarea.placeholder = "請先選擇包含 GPS 資訊的照片...";
+            submitBtn.disabled = true;
+            hasGPS = false;
+            gpsCoordinates = null;
+            statusDiv.innerHTML = "請選擇一張照片";
+            statusDiv.className = "alert alert-info text-center mb-3";
+        }
+
+        // 表單提交驗證
+        uploadForm.addEventListener('submit', function(e) {
+            if (!hasGPS) {
+                e.preventDefault();
+                alert('請選擇包含 GPS 資訊的照片！');
+                return false;
+            }
+            
+            if (!descriptionTextarea.value.trim()) {
+                e.preventDefault();
+                alert('請填寫照片描述！');
+                descriptionTextarea.focus();
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>

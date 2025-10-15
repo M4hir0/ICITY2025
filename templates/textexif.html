@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPS Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+</head>
+<body>
+    <div class="container">
+        <div id="status">請選擇一張照片</div>
+        
+        <div class="upload-section">
+            <input type="file" 
+                   id="imageInput" 
+                   accept="image/*" 
+                   multiple="false">
+            <label for="imageInput" class="upload-button">
+                選擇照片
+            </label>
+        </div>
+
+        <div id="imagePreview" class="preview-section"></div>
+        <div id="location" class="location-section"></div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const locationDiv = document.getElementById('location');
+        const imagePreview = document.getElementById('imagePreview');
+        const imageInput = document.getElementById('imageInput');
+
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // 顯示預覽圖
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-image">`;
+            }
+            reader.readAsDataURL(file);
+
+            // 讀取 EXIF 數據
+            statusDiv.innerHTML = "正在讀取照片資訊...";
+            
+            EXIF.getData(file, function() {
+                const exifData = EXIF.getAllTags(this);
+                console.log('EXIF data:', exifData);
+
+                if (exifData.GPSLatitude && exifData.GPSLongitude) {
+                    // 轉換 GPS 座標
+                    const latitude = convertDMSToDD(
+                        exifData.GPSLatitude[0],
+                        exifData.GPSLatitude[1],
+                        exifData.GPSLatitude[2],
+                        exifData.GPSLatitudeRef
+                    );
+
+                    const longitude = convertDMSToDD(
+                        exifData.GPSLongitude[0],
+                        exifData.GPSLongitude[1],
+                        exifData.GPSLongitude[2],
+                        exifData.GPSLongitudeRef
+                    );
+
+                    // 顯示 GPS 資訊
+                    locationDiv.innerHTML = `
+                        <div class="location-info">
+                            <h3>照片 GPS 資訊</h3>
+                            <p>緯度: ${latitude.toFixed(6)}°</p>
+                            <p>經度: ${longitude.toFixed(6)}°</p>
+                            <p>拍攝時間: ${exifData.DateTimeOriginal || '未知'}</p>
+                            <p><a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank">
+                                在 Google Maps 中查看位置
+                            </a></p>
+                        </div>
+                    `;
+                    statusDiv.innerHTML = "成功讀取 GPS 資訊！";
+                } else {
+                    locationDiv.innerHTML = '';
+                    statusDiv.innerHTML = "此照片不包含 GPS 資訊";
+                }
+            });
+        });
+
+        // 將度分秒格式轉換為十進位度數
+        function convertDMSToDD(degrees, minutes, seconds, direction) {
+            let dd = degrees + (minutes / 60) + (seconds / 3600);
+            if (direction === 'S' || direction === 'W') {
+                dd = dd * -1;
+            }
+            return dd;
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        #status {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            text-align: center;
+            word-wrap: break-word;
+        }
+
+        .upload-section {
+            margin: 20px 0;
+            text-align: center;
+            width: 100%;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        .upload-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-align: center;
+            margin: 0 auto;
+            font-size: 16px;
+        }
+
+        .upload-button:hover {
+            background-color: #45a049;
+        }
+
+        .preview-section {
+            margin: 20px 0;
+            text-align: center;
+            width: 100%;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            object-fit: contain;
+        }
+
+        .location-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            width: 100%;
+        }
+
+        .location-info {
+            margin: 10px 0;
+        }
+
+        .location-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+
+        .location-info p {
+            margin: 5px 0;
+            color: #666;
+            word-wrap: break-word;
+        }
+
+        .location-info a {
+            color: #4CAF50;
+            text-decoration: none;
+            word-wrap: break-word;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .location-info a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .upload-button {
+                padding: 15px;
+                font-size: 16px;
+                margin: 0;
+            }
+
+            .location-info h3 {
+                font-size: 1.1em;
+            }
+
+            .location-info p {
+                font-size: 0.95em;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .container {
+                padding: 8px;
+            }
+
+            .upload-button {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .location-info h3 {
+                font-size: 1em;
+            }
+
+            .location-info p {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</body>
+</html>
