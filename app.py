@@ -217,6 +217,7 @@ def save_to_firestore(image_url, description, ai_result, status, filename, has_g
         return False
 
 def analyze_and_upload(img_file, description):
+    print("🔍 Starting analyze_and_upload function - Version 2.0")
     try:
         image = Image.open(img_file)
 
@@ -226,6 +227,8 @@ def analyze_and_upload(img_file, description):
         has_gps = "GPSInfo" in exif
         gps_raw = exif.get("GPSInfo")
         gps_info = get_gps_info(gps_raw) if gps_raw else "No GPS Info"
+
+        print(f"📍 GPS Info detected: {has_gps}")
 
         # Upload to Imgbb
         imgbb_url = upload_to_imgbb(img_file)
@@ -239,21 +242,29 @@ def analyze_and_upload(img_file, description):
         # 嘗試保存到 Firestore（即使失敗也繼續）
         firestore_success = False
         if has_gps:
+            print("🔄 Attempting to save to Firestore...")
             firestore_success = save_to_firestore(imgbb_url, description, ai_result, status, img_file, has_gps, gps_info)
+            print(f"📊 Firestore save result: {firestore_success}")
             if firestore_success:
+                print("📤 Sending photo to Telegram...")
                 send_photo(img_file, description)
+        else:
+            print("⚠️ No GPS info, skipping Firestore save")
 
         result = f"📅 Capture Time: {timestamp}\n📍 GPS Info: \n{gps_info}\n🖼️ Imgbb URL: {imgbb_url}\nAI Analysis Result: {ai_result}\nStatus: {status}"
-        if not firestore_success:
+        if not firestore_success and has_gps:
             result += "\n⚠️ Note: Data not saved to database due to connection issues"
         
         # 關閉圖片以釋放記憶體
         image.close()
+        print("✅ Image processing completed successfully")
         
         return None, result  # 返回 None 作為 image，因為我們已經關閉了它
         
     except Exception as e:
         print(f"❌ Error in analyze_and_upload: {e}")
+        import traceback
+        traceback.print_exc()
         return None, f"❌ Error processing image: {str(e)}"
 
 app = Flask(__name__)
