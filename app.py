@@ -252,6 +252,8 @@ def upload_file():
 def uploaded_file(filename):
     return redirect(url_for('static', filename='uploads/' + filename))
 
-if __name__ == '__main__':
-    init_firebase()
-    app.run(debug=True)
+init_firebase()
+
+# if __name__ == '__main__':
+#     init_firebase()
+#     app.run(debug=True)
