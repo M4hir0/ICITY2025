@@ -28,7 +28,7 @@ Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK
 **Database**
 
 * [firebase](https://firebase.google.com/)
-* [supabase](https://supabase.com/) (Trying this as open source firebase alternative)
+* [supabase](https://supabase.com/) (Considering trying this open source firebase alternative)
 
 **WebGIS**
 
