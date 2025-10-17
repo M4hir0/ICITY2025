@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 California Wildfire Monitor</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: white;
+    }
+    
+    .header {
+      background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .header p {
+      margin: 10px 0 0 0;
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+    
+    .controls {
+      padding: 10px 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #28a745;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    .control-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .refresh-btn, .toggle-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      min-width: 50px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .refresh-btn:hover, .toggle-btn:hover {
+      background: #0056b3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .refresh-btn:disabled, .toggle-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-btn {
+      background: #28a745;
+      min-width: 50px;
+      padding: 10px 15px;
+      font-size: 24px;
+      font-weight: bold;
+      line-height: 1;
+      font-family: Arial, sans-serif;
+    }
+    
+    .toggle-btn:hover {
+      background: #218838;
+    }
+    
+    .toggle-btn.stats-hidden {
+      background: #28a745;
+      opacity: 1;
+    }
+    
+    .toggle-btn.stats-hidden:hover {
+      background: #218838;
+      opacity: 1;
+    }
+    
+    #map {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      margin: 20px;
+      border-radius: 5px;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .fire-info {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    
+    .fire-info strong {
+      color: #dc3545;
+    }
+    
+    .fire-info a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    
+    .fire-info a:hover {
+      text-decoration: underline;
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      padding: 15px 20px;
+      background: #f8f9fa;
+      flex-shrink: 0;
+      border-bottom: 1px solid #dee2e6;
+      transition: all 0.3s ease;
+      opacity: 1;
+      visibility: visible;
+      max-height: 200px;
+      overflow: hidden;
+    }
+    
+    .stats.hidden {
+      opacity: 0;
+      visibility: hidden;
+      max-height: 0;
+      padding: 0 20px;
+    }
+    
+    .stat-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 2em;
+      font-weight: bold;
+      color: #dc3545;
+    }
+    
+    .stat-label {
+      color: #666;
+      font-size: 0.9em;
+    }
+    
+    @media (max-width: 768px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .header h1 {
+        font-size: 2em;
+      }
+      
+      .header {
+        padding: 10px 15px;
+      }
+      
+      .controls {
+        padding: 8px 15px;
+      }
+      
+      .stats {
+        padding: 10px 15px;
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔥 California Wildfire Monitor</h1>
+      <p>Real-time Wildfire Monitoring System</p>
+    </div>
+    
+    <div class="controls">
+      <div class="status">
+        <div class="status-indicator" id="statusIndicator"></div>
+        <span id="statusText">Loading...</span>
+      </div>
+      <div class="control-buttons">
+        <button class="refresh-btn" id="refreshBtn" onclick="loadFireData()">🔄 Refresh</button>
+        <button class="toggle-btn stats-hidden" id="toggleStatsBtn" onclick="toggleStats()" title="Show/Hide Statistics">+</button>
+      </div>
+    </div>
+    
+    <div id="stats" class="stats hidden">
+      <div class="stat-card">
+        <div class="stat-number" id="totalFires">0</div>
+        <div class="stat-label">Active Fires</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="totalAcres">0</div>
+        <div class="stat-label">Total Acres Burned</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="avgContained">0%</div>
+        <div class="stat-label">Avg Containment</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="lastUpdate">--</div>
+        <div class="stat-label">Last Update</div>
+      </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div id="loading" class="loading">
+      <h3>Loading Fire Data...</h3>
+      <p>Please wait while we fetch the latest wildfire information from Cal Fire.</p>
+    </div>
+    
+    <div id="error" class="error" style="display: none;">
+      <h4>⚠️ Loading Error</h4>
+      <p id="errorMessage">Unable to load fire data. Please check your network connection and try again.</p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Cal Fire API endpoint - using CORS proxy
+    const CALFIRE_API = "https://api.allorigins.win/get?url=" + encodeURIComponent("https://www.fire.ca.gov/umbraco/api/IncidentApi/List?inactive=false");
+    const CALFIRE_API_BACKUP = "https://corsproxy.io/?https://www.fire.ca.gov/umbraco/api/IncidentApi/List?inactive=false";
+    
+    // Global variables
+    let map;
+    let fireMarkers = [];
+    let fireData = [];
+    let statsVisible = false;
+    
+    // Initialize map
+    function initMap() {
+      map = L.map('map', {
+        preferCanvas: true,
+        zoomControl: true,
+        attributionControl: true
+      }).setView([37.5, -119.5], 6);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18,
+        minZoom: 3,
+        subdomains: ['a', 'b', 'c']
+      }).addTo(map);
+      
+      // Ensure map is properly sized after initialization
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+    }
+    
+    // Toggle stats visibility
+    function toggleStats() {
+      const stats = document.getElementById('stats');
+      const toggleBtn = document.getElementById('toggleStatsBtn');
+      
+      // Disable button during transition to prevent rapid clicking
+      toggleBtn.disabled = true;
+      
+      if (statsVisible) {
+        // Hide stats with smooth transition
+        stats.classList.add('hidden');
+        toggleBtn.textContent = '+';
+        toggleBtn.classList.add('stats-hidden');
+        statsVisible = false;
+        
+        // Resize map after transition completes
+        setTimeout(() => {
+          if (map) {
+            map.invalidateSize();
+          }
+          toggleBtn.disabled = false;
+        }, 300);
+      } else {
+        // Show stats with smooth transition
+        stats.classList.remove('hidden');
+        toggleBtn.textContent = '−';
+        toggleBtn.classList.remove('stats-hidden');
+        statsVisible = true;
+        
+        // Resize map after transition completes
+        setTimeout(() => {
+          if (map) {
+            map.invalidateSize();
+          }
+          toggleBtn.disabled = false;
+        }, 300);
+      }
+    }
+    
+    // Load fire data
+    async function loadFireData() {
+      const statusIndicator = document.getElementById('statusIndicator');
+      const statusText = document.getElementById('statusText');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const loading = document.getElementById('loading');
+      const error = document.getElementById('error');
+      const stats = document.getElementById('stats');
+      
+      // Show loading state
+      statusIndicator.style.background = '#ffc107';
+      statusText.textContent = 'Loading...';
+      refreshBtn.disabled = true;
+      loading.style.display = 'block';
+      error.style.display = 'none';
+      // Don't override stats visibility - let the toggle button control it
+      
+      try {
+        // 清除現有標記
+        clearMarkers();
+        
+        // 嘗試 CORS 代理
+        let data;
+        
+        try {
+          // 嘗試第一個代理 (allorigins)
+          const response = await fetch(CALFIRE_API);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const proxyResponse = await response.json();
+          
+          // allorigins 返回的格式是 {contents: "實際的JSON字符串"}
+          if (proxyResponse.contents) {
+            data = JSON.parse(proxyResponse.contents);
+          } else {
+            data = proxyResponse;
+          }
+        } catch (err) {
+          console.log('第一個 CORS 代理失敗，嘗試備用代理...', err);
+          
+          // 嘗試備用代理 (thingproxy)
+          const response = await fetch(CALFIRE_API_BACKUP);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          data = await response.json();
+        }
+        
+        if (!Array.isArray(data)) {
+          throw new Error('API 返回的數據格式不正確');
+        }
+        
+        fireData = data;
+        
+        // 處理火災數據
+        processFireData(data);
+        
+        // 更新統計信息
+        updateStats(data);
+        
+        // Hide loading, show success state
+        loading.style.display = 'none';
+        statusIndicator.style.background = '#28a745';
+        statusText.textContent = `Loaded ${data.length} fire incidents`;
+        // Stats panel visibility is controlled by the toggle button, not here
+        
+        // Resize map after data loading
+        setTimeout(() => {
+          if (map) {
+            map.invalidateSize();
+          }
+        }, 100);
+        
+      } catch (err) {
+        console.error('載入火災數據時發生錯誤:', err);
+        
+        // Show error state
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        statusIndicator.style.background = '#dc3545';
+        statusText.textContent = 'Load Failed';
+        document.getElementById('errorMessage').textContent = err.message;
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+    
+    // 處理火災數據並在地圖上顯示
+    function processFireData(data) {
+      let validFires = 0;
+      
+      data.forEach(fire => {
+        const lat = parseFloat(fire.Latitude);
+        const lon = parseFloat(fire.Longitude);
+        
+        if (!isNaN(lat) && !isNaN(lon)) {
+          // 根據火災大小選擇圖標顏色
+          let iconColor = '#ff6b6b'; // 預設紅色
+          if (fire.AcresBurned > 10000) {
+            iconColor = '#dc3545'; // 大型火災 - 深紅色
+          } else if (fire.AcresBurned > 1000) {
+            iconColor = '#fd7e14'; // 中型火災 - 橙色
+          } else if (fire.AcresBurned > 100) {
+            iconColor = '#ffc107'; // 小型火災 - 黃色
+          }
+          
+          // 創建自定義圖標
+          const fireIcon = L.divIcon({
+            className: 'fire-marker',
+            html: `<div style="
+              background: ${iconColor};
+              width: 20px;
+              height: 20px;
+              border-radius: 50%;
+              border: 3px solid white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            "></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+          
+          // 創建標記
+          const marker = L.marker([lat, lon], { icon: fireIcon }).addTo(map);
+          
+          // Create popup content
+          const popupContent = `
+            <div class="fire-info" style="font-size: 12px; line-height: 1.3;">
+              <h3 style="margin: 0 0 8px 0; color: #dc3545; font-size: 14px;">🔥 ${fire.Name}</h3>
+              <p style="margin: 2px 0;"><strong>County:</strong> ${fire.County}</p>
+              <p style="margin: 2px 0;"><strong>Location:</strong> ${fire.Location}</p>
+              <p style="margin: 2px 0;"><strong>Acres:</strong> ${fire.AcresBurned.toLocaleString()}</p>
+              <p style="margin: 2px 0;"><strong>Contained:</strong> ${fire.PercentContained}%</p>
+              <p style="margin: 2px 0;"><strong>Started:</strong> ${new Date(fire.Started).toLocaleDateString()}</p>
+              <p style="margin: 2px 0;"><strong>Updated:</strong> ${new Date(fire.Updated).toLocaleDateString()}</p>
+              <p style="margin: 2px 0;"><strong>Type:</strong> ${fire.Type}</p>
+              <div style="margin-top: 8px;">
+                <a href="${fire.Url}" target="_blank" style="margin-right: 8px; font-size: 11px;">🔗 Details</a>
+                <a href="https://cameras.alertcalifornia.org/" target="_blank" style="font-size: 11px;">📷 Cameras</a>
+              </div>
+            </div>
+          `;
+          
+          marker.bindPopup(popupContent);
+          fireMarkers.push(marker);
+          validFires++;
+        }
+      });
+      
+      console.log(`成功載入 ${validFires} 個有效的火災位置`);
+    }
+    
+    // 更新統計信息
+    function updateStats(data) {
+      const totalFires = data.length;
+      const totalAcres = data.reduce((sum, fire) => sum + (fire.AcresBurned || 0), 0);
+      const avgContained = data.length > 0 
+        ? Math.round(data.reduce((sum, fire) => sum + (fire.PercentContained || 0), 0) / data.length)
+        : 0;
+      const lastUpdate = data.length > 0 
+        ? new Date(Math.max(...data.map(fire => new Date(fire.Updated).getTime()))).toLocaleString('zh-TW')
+        : '--';
+      
+      document.getElementById('totalFires').textContent = totalFires;
+      document.getElementById('totalAcres').textContent = totalAcres.toLocaleString();
+      document.getElementById('avgContained').textContent = avgContained + '%';
+      document.getElementById('lastUpdate').textContent = lastUpdate;
+    }
+    
+    // 清除所有標記
+    function clearMarkers() {
+      fireMarkers.forEach(marker => {
+        map.removeLayer(marker);
+      });
+      fireMarkers = [];
+    }
+    
+    // 頁面載入完成後初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      initMap();
+      loadFireData();
+      
+      // Handle window resize to fix map display issues
+      window.addEventListener('resize', function() {
+        setTimeout(() => {
+          if (map) {
+            map.invalidateSize();
+          }
+        }, 100);
+      });
+      
+      // Use ResizeObserver to detect container size changes
+      if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(entries => {
+          setTimeout(() => {
+            if (map) {
+              map.invalidateSize();
+            }
+          }, 50);
+        });
+        
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+          resizeObserver.observe(mapContainer);
+        }
+      }
+    });
+    
+    // Auto-update data every 5 minutes
+    setInterval(loadFireData, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
