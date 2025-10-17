@@ -317,6 +317,15 @@
         subdomains: ['a', 'b', 'c']
       }).addTo(map);
       
+      // Add zoom event listener to update fire markers
+      map.on('zoomend', function() {
+        if (fireData.length > 0) {
+          // Clear existing markers before recreating
+          clearMarkers();
+          processFireData(fireData);
+        }
+      });
+      
       // Ensure map is properly sized after initialization
       setTimeout(() => {
         map.invalidateSize();
@@ -459,29 +468,58 @@
         const lon = parseFloat(fire.Longitude);
         
         if (!isNaN(lat) && !isNaN(lon)) {
-          // 根據火災大小選擇圖標顏色
-          let iconColor = '#ff6b6b'; // 預設紅色
+          // 根據燃燒面積計算背景圓圈大小
+          let baseCircleSize = 20; // 最小圓圈大小
+          let circleOpacity = 0.45; // 進一步增加圓圈不透明度
+          
           if (fire.AcresBurned > 10000) {
-            iconColor = '#dc3545'; // 大型火災 - 深紅色
+            baseCircleSize = 60; // 大型火災
+            circleOpacity = 0.5;
           } else if (fire.AcresBurned > 1000) {
-            iconColor = '#fd7e14'; // 中型火災 - 橙色
+            baseCircleSize = 40; // 中型火災
+            circleOpacity = 0.48;
           } else if (fire.AcresBurned > 100) {
-            iconColor = '#ffc107'; // 小型火災 - 黃色
+            baseCircleSize = 30; // 小型火災
+            circleOpacity = 0.45;
+          } else {
+            baseCircleSize = 20; // 很小火災
+            circleOpacity = 0.42;
           }
           
-          // 創建自定義圖標
+          // 根據地圖縮放級別調整圓圈大小
+          const currentZoom = map.getZoom();
+          const zoomFactor = Math.max(0.5, Math.min(2.0, currentZoom / 6)); // 縮放因子在 0.5-2.0 之間
+          const circleSize = Math.round(baseCircleSize * zoomFactor);
+          
+          // 創建火焰圖標（只有背景圓圈，無邊框）
           const fireIcon = L.divIcon({
             className: 'fire-marker',
             html: `<div style="
-              background: ${iconColor};
-              width: 20px;
-              height: 20px;
-              border-radius: 50%;
-              border: 3px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            "></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+              position: relative;
+              width: ${circleSize}px;
+              height: ${circleSize}px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="
+                position: absolute;
+                width: ${circleSize}px;
+                height: ${circleSize}px;
+                background: radial-gradient(circle, rgba(255, 69, 0, ${circleOpacity}) 0%, rgba(255, 69, 0, 0) 70%);
+                border-radius: 50%;
+              "></div>
+              <div style="
+                position: relative;
+                z-index: 2;
+                font-size: 20px;
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+                cursor: pointer;
+                pointer-events: auto;
+              ">🔥</div>
+            </div>`,
+            iconSize: [circleSize, circleSize],
+            iconAnchor: [circleSize/2, circleSize/2]
           });
           
           // 創建標記
@@ -505,7 +543,14 @@
             </div>
           `;
           
+          // 綁定彈出窗口內容
           marker.bindPopup(popupContent);
+          
+          // 添加點擊事件（在 bindPopup 之後）
+          marker.on('click', function(e) {
+            console.log('Marker clicked:', fire.Name); // 調試用
+            marker.openPopup();
+          });
           fireMarkers.push(marker);
           validFires++;
         }
