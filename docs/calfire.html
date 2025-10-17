@@ -534,7 +534,7 @@
               <p style="margin: 2px 0;"><strong>Acres:</strong> ${fire.AcresBurned.toLocaleString()}</p>
               <p style="margin: 2px 0;"><strong>Contained:</strong> ${fire.PercentContained}%</p>
               <p style="margin: 2px 0;"><strong>Started:</strong> ${new Date(fire.Started).toLocaleDateString('en-US', {timeZone: 'America/Los_Angeles'})}</p>
-              <p style="margin: 2px 0;"><strong>Updated:</strong> ${new Date(fire.Updated).toLocaleDateString('en-US', {timeZone: 'America/Los_Angeles'})}</p>
+              <p style="margin: 2px 0;"><strong>Updated:</strong> ${new Date(fire.Updated).toLocaleString('en-US', {timeZone: 'America/Los_Angeles'})}</p>
               <p style="margin: 2px 0;"><strong>Type:</strong> ${fire.Type}</p>
               <div style="margin-top: 8px;">
                 <a href="${fire.Url}" target="_blank" style="margin-right: 8px; font-size: 11px;">🔗 Details</a>
