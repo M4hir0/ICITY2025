@@ -64,6 +64,8 @@ service cloud.firestore {
 
 ## Technology Used
 
+<img src="system_architecture.png" >
+
 **Web Framework**
 
 * [Flask Documentation](https://flask.palletsprojects.com/en/stable/)
