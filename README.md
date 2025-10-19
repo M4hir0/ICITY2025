@@ -6,6 +6,20 @@ Authors: Daniel Gau, Tiffany Gau
 
 Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK67ihs82HZD8FoKojqE9bGLHrm9od50/edit?usp=sharing)
 
+## Existing Methods for Wildfire Monitoring
+
+| **System Name**  | **Operating Agency / Key Features**  | **Primary Functions & Monitoring Approach**   |
+| ------ | -------- | ------------------ |
+| **FIRIS (Fire Integrated Real-Time Intelligence System)** | *California Governor’s Office of Emergency Services (Cal OES)* | Deploys fixed-wing aircraft equipped with advanced infrared and multispectral sensors to collect real-time wildfire data. Information is rapidly transmitted to ground-based systems, providing situational awareness for incident commanders and response teams. ([caloes.ca.gov][1]) |
+| **ALERTCalifornia**  | *University of California, San Diego / Public Safety Network*  | Operates a statewide network of over 1,100 high-definition cameras across California’s wildfire-prone regions. The system uses AI-powered image analysis to detect anomalies and issue early alerts to emergency agencies. ([Wikipedia][2])                                            |
+| **InciWeb**  | *U.S. Forest Service / Multi-Agency Collaboration* | Serves as a unified national platform for sharing verified information on wildfires and major incidents. Although not a fully real-time monitoring system, it provides official updates, maps, and public safety notices for ongoing events. ([Wikipedia][3])                          |
+| **Watch Duty** | *Volunteer-Based Nonprofit Organization* | Combines official data sources with community reports. Supported by trained volunteers, the platform monitors, verifies, and disseminates near real-time wildfire alerts and interactive maps to the public. ([watchduty.org][4])  |
+
+[1]: https://www.caloes.ca.gov/office-of-the-director/operations/response-operations/fire-rescue/firis/?utm_source=chatgpt.com "FIRIS - California Governor's Office of Emergency Services"
+[2]: https://en.wikipedia.org/wiki/ALERTCalifornia?utm_source=chatgpt.com "ALERTCalifornia"
+[3]: https://en.wikipedia.org/wiki/InciWeb?utm_source=chatgpt.com "InciWeb"
+[4]: https://www.watchduty.org/?utm_source=chatgpt.com "Watch Duty - Wildfire Maps & Alerts"
+
 ## Technology Used
 
 **Web Framework**
