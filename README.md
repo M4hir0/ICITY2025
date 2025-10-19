@@ -8,6 +8,26 @@ Authors: Daniel Gau, Tiffany Gau
 
 Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK67ihs82HZD8FoKojqE9bGLHrm9od50/edit?usp=sharing)
 
+## Demo Websites
+
+* [BlazeWatch](https://icity2025.onrender.com/)
+* [Task List](https://m4hir0.github.io/ICITY2025)
+* [Task Control Panel](https://m4hir0.github.io/ICITY2025/update.html)
+* [California Wildfire Monitor](https://m4hir0.github.io/ICITY2025/calfire.html) (Data from fire.ca.gov)
+
+Note that, for security purposes, the firestore access would have been set to readonly.
+
+```
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read: if true;     // allow read
+      allow write: if false;   // not allow write
+    }
+  }
+}
+```
+
 ## Existing Systems for Wildfire Monitoring
 
 | **System Name**  | **Operating Agency / Key Features**  | **Primary Functions & Monitoring Approach**   |
@@ -78,21 +98,4 @@ Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK
 
 * [Render](https://render.com/)
 
-## Demo Websites
 
-* [BlazeWatch](https://icity2025.onrender.com/)
-* [Task List](https://m4hir0.github.io/ICITY2025)
-* [Task Control Panel](https://m4hir0.github.io/ICITY2025/update.html)
-
-Note that, for security purposes, the firestore access would have been set to readonly.
-
-```
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read: if true;     // allow read
-      allow write: if false;   // not allow write
-    }
-  }
-}
-```
