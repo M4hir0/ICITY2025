@@ -22,6 +22,8 @@ Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK
 
 ## Common Methods for Wildfire Monitoring
 
+<img src="images/wildfire.png">
+
 | Method | Advantage | Limitation |
 | -------------- | ---------------- | -------------- |
 | **1. Satellite** | Covers vast areas and can detect heat spots and smoke even in remote regions. | Limited update frequency and resolution; cloud cover can obstruct detection. | 
