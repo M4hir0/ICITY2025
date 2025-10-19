@@ -6,7 +6,7 @@ Authors: Daniel Gau, Tiffany Gau
 
 Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK67ihs82HZD8FoKojqE9bGLHrm9od50/edit?usp=sharing)
 
-## Existing Methods for Wildfire Monitoring
+## Existing Systems for Wildfire Monitoring
 
 | **System Name**  | **Operating Agency / Key Features**  | **Primary Functions & Monitoring Approach**   |
 | ------ | -------- | ------------------ |
