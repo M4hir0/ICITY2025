@@ -1,5 +1,7 @@
 # ICITY2025
 
+<img src="images/BlazeWatch.png" >
+
 Title: BlazeWatch: AI-powered wildfire early alert.
 
 Authors: Daniel Gau, Tiffany Gau
