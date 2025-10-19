@@ -28,7 +28,7 @@ Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK
 | **2. Drones** | Provides high-resolution, close-range imagery and can be deployed flexibly.  | Short flight duration, requires operators, and not suitable for continuous monitoring. |
 | **3. Surveillance Cameras** | Offers continuous real-time monitoring and can be paired with AI for automatic detection. | Coverage is restricted to installed areas and setup/maintenance costs are high. |
 | **4. Phone Reports** | Delivers immediate, ground-truth observations from citizens in real time.  | Reports vary in accuracy and timeliness, and cannot be automatically analyzed. |
-| **5. BlazeWatch (AI-Powered Citizen Reporting)** | Uses everyday smartphone photos with AI analysis for instant wildfire detection and alerts. | Depends on user participation and photo quality, and currently limited to populated regions. |
+| **5. BlazeWatch** | Uses everyday smartphone photos with AI analysis for instant wildfire detection and alerts. | Depends on user participation and photo quality, and currently limited to populated regions. |
 
 
 
