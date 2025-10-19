@@ -23,7 +23,7 @@ Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK
 ## Common Methods for Wildfire Monitoring
 
 | Method | Advantage | Limitation |
-| -------------- | ---------------- | -------------- | ---------- |
+| -------------- | ---------------- | -------------- |
 | **1. Satellite** | Covers vast areas and can detect heat spots and smoke even in remote regions. | Limited update frequency and resolution; cloud cover can obstruct detection. | 
 | **2. Drones** | Provides high-resolution, close-range imagery and can be deployed flexibly.  | Short flight duration, requires operators, and not suitable for continuous monitoring. |
 | **3. Surveillance Cameras** | Offers continuous real-time monitoring and can be paired with AI for automatic detection. | Coverage is restricted to installed areas and setup/maintenance costs are high. |
