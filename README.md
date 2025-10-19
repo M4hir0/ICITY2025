@@ -22,7 +22,10 @@ Slides: [Click for Slides](https://docs.google.com/presentation/d/1yoHIYBsCqZywK
 [3]: https://en.wikipedia.org/wiki/InciWeb?utm_source=chatgpt.com "InciWeb"
 [4]: https://www.watchduty.org/?utm_source=chatgpt.com "Watch Duty - Wildfire Maps & Alerts"
 
+**California Wildfire Monitoring Websites**
 
+* [The California Department of Forestry and Fire Protection](https://www.fire.ca.gov/)
+* [AlertCalifornia](https://cameras.alertcalifornia.org/)
 
 
 ## Common Methods for Wildfire Monitoring
