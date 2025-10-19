@@ -64,7 +64,7 @@ service cloud.firestore {
 
 ## Technology Used
 
-<img src="system_architecture.png" >
+<img src="images/system_architecture.png" >
 
 **Web Framework**
 
